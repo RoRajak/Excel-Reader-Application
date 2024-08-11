@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./provider";
-import img from '../../public/logoBlue.svg'
+
 
 import ClientSessionProvider from "@/components/ClientSessionProvider";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Excel Reader",
   description: "Read Excel file",
   icons:{
-    icon:img
+    icon:'/logoBlue.svg',
   }
 };
 

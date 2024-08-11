@@ -6,8 +6,7 @@ import { TailSpin } from "react-loader-spinner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import Image from "next/image";
-import { pinchblackIcon, pinchWhiteIcon } from "@/constants";
+
 
 export default function Home() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
