@@ -17,11 +17,20 @@ import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { log } from "console";
+
 
 interface HeroSectionProps {
   toggleSidebar: () => void;
 }
-
+interface RowData {
+  id: string | number;
+  links: string;
+  prefix: string;
+  "select tags": string;
+  "selected tags"?: string;
+  [key: string]: string | number | undefined; // Allow any string key with string or number values
+}
 const HeroSection: React.FC<HeroSectionProps> = ({ toggleSidebar }) => {
   const { resolvedTheme } = useTheme();
   const [file, setFile] = useState<File | null>(null);
@@ -85,33 +94,48 @@ const HeroSection: React.FC<HeroSectionProps> = ({ toggleSidebar }) => {
   const readFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (file.name.endsWith(".csv")) {
-        // Read CSV
-        const text = e.target?.result as string;
-        const result = Papa.parse(text, { header: true });
-        console.log(result.data); // Log to see the parsed CSV data
-        setData(result.data);
-        initializeSelectedTags(result.data);
-      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-        // Read Excel
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        console.log(jsonData); // Log to see the parsed Excel data
-        setData(jsonData);
-        initializeSelectedTags(jsonData);
+      try {
+        if (file.name.endsWith(".csv")) {
+          const text = e.target?.result as string;
+          const result = Papa.parse<RowData>(text, { header: true });
+          console.log(result.data);
+          
+          setData(result.data);
+          initializeSelectedTags(result.data);
+        } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          const headers = jsonData[0] as string[];
+          
+          
+          const formattedData: RowData[] = jsonData.slice(1).map((row: any) => {
+            return headers.reduce((obj: RowData, header: string, index: number) => {
+              obj[header as keyof RowData] = row[index] as string | number;
+              console.log(obj);
+              
+              return obj;
+            }, {} as RowData);
+          });
+          
+          
+          setData(formattedData);
+          initializeSelectedTags(formattedData);
+        }
+      } catch (error) {
+        console.error("Error reading file:", error);
+        setError("Error reading file. Please try again.");
       }
     };
-
+  
     if (file.name.endsWith(".csv")) {
       reader.readAsText(file);
     } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
       reader.readAsArrayBuffer(file);
     }
-  };
-
+  };;
   const initializeSelectedTags = (data: any[]) => {
     const initialTags: { [key: number]: string[] } = {};
     data.forEach((row, index) => {
@@ -147,7 +171,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ toggleSidebar }) => {
       setFile(droppedFile);
       setError(null);
       readFile(droppedFile);
-      console.log(readFile(droppedFile));
+      
     } else {
       setFile(null);
       setError("Please upload a valid Excel or CSV file.");
@@ -165,14 +189,19 @@ const HeroSection: React.FC<HeroSectionProps> = ({ toggleSidebar }) => {
   };
   const handleUploadClick = () => {
     setIsHandleUploadRun(true);
-    setTimeout(() => {
-      if (file) {
+    if (file) {
+      
+      setTimeout(() => {
         readFile(file);
-        removeFile();
-      }
+      removeFile();
+        setIsHandleUploadRun(false);
+      }, 3000);
+    } else {
+      setError("Please select a file before uploading.");
       setIsHandleUploadRun(false);
-    }, 5000);
+    }
   };
+
 
   return (
     <div className="max-h-screen bg-[#FAFAFB] dark:bg-dark-bg">
